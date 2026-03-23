@@ -1,4 +1,4 @@
-Storage Systems
+**##Storage Systems**
 
 Different storage systems were selected to match the nature of each goal rather than forcing a single database to do everything poorly.
 
@@ -12,7 +12,7 @@ For streaming ICU vitals, a time-series database (e.g., InfluxDB) is used becaus
 
 A data lake is included to store raw data cheaply and flexibly before transformation, which is important for future reprocessing or model improvements.
 
-OLTP vs OLAP Boundary
+##OLTP vs OLAP Boundary
 
 The OLTP system ends at the PostgreSQL database, which handles real-time transactional operations such as updating patient records and retrieving individual histories.
 
@@ -20,7 +20,7 @@ The OLAP system begins once data is extracted into the data lake and data wareho
 
 This separation is important because mixing OLTP and OLAP workloads would degrade performance. Doctors need fast, reliable access to patient records (OLTP), while analytics workloads require heavy scans and aggregations (OLAP).
 
-Trade-offs
+##Trade-offs
 
 A major trade-off in this design is system complexity vs scalability.
 
