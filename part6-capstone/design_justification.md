@@ -1,9 +1,35 @@
-## Design Justification
+Storage Systems
 
-The transition from a single, flat Excel file to this multi-database architecture is a fundamental shift from data storage to data intelligence. While an Excel file is "simple" to start, it lacks the scalability, integrity, and analytical power required for a modern retail enterprise.
+Different storage systems were selected to match the nature of each goal rather than forcing a single database to do everything poorly.
 
-In **Part 1**, we implemented an **RDBMS** using 3NF. This was critical because, unlike a flat file, it enforces data integrity through primary and foreign keys, ensuring we never have "orphaned" orders or inconsistent customer emails. In **Part 2**, we introduced **NoSQL (MongoDB)**, which provides the schema flexibility necessary to handle a diverse product catalog that an Excel table simply cannot accommodate without hundreds of empty columns.
+For predicting patient readmission risk, a data warehouse is used because it supports large-scale analytical queries and joins across historical patient records. This is critical for training machine learning models. A feature store is added to ensure consistent feature definitions between training and inference, reducing training-serving skew.
 
-For high-level decision-making, we moved data into a **Data Warehouse (Part 3)** using a Star Schema. This architecture allows the business to run complex analytical queries (OLAP) across millions of rows without slowing down the live transactional system. Furthermore, by integrating a **Vector Database (Part 4)**, we unlocked AI-driven semantic search, allowing customers to find products based on intent rather than just exact keywords—a feat impossible in a traditional spreadsheet.
+For allowing doctors to query patient history in plain English, the system relies on the OLTP database (PostgreSQL) as the source of truth for up-to-date patient records. The NLP system (LLM layer) translates natural language into structured queries executed against this database.
 
-Finally, the **Data Lake (Part 5)** allows us to store massive amounts of raw data (CSV, JSON, and Parquet) cost-effectively. Using **DuckDB** for "in-place" querying provides the speed of a full database with the low overhead of a file system. This holistic architecture ensures our data is not just "saved," but is optimized for consistency, speed, and future AI integration.
+For generating monthly reports, the data warehouse is again the correct choice because it is optimized for aggregations (e.g., occupancy rates, departmental costs). Using OLTP here would be inefficient and slow.
+
+For streaming ICU vitals, a time-series database (e.g., InfluxDB) is used because it is optimized for high-frequency, timestamped data. A streaming platform (Kafka) ensures reliable ingestion of continuous data.
+
+A data lake is included to store raw data cheaply and flexibly before transformation, which is important for future reprocessing or model improvements.
+
+OLTP vs OLAP Boundary
+
+The OLTP system ends at the PostgreSQL database, which handles real-time transactional operations such as updating patient records and retrieving individual histories.
+
+The OLAP system begins once data is extracted into the data lake and data warehouse via ETL pipelines. From this point onward, the focus shifts from transactional consistency to analytical processing, including reporting and machine learning.
+
+This separation is important because mixing OLTP and OLAP workloads would degrade performance. Doctors need fast, reliable access to patient records (OLTP), while analytics workloads require heavy scans and aggregations (OLAP).
+
+Trade-offs
+
+A major trade-off in this design is system complexity vs scalability.
+
+Using multiple specialized systems (data lake, warehouse, feature store, streaming engine, time-series DB) significantly improves scalability and performance. However, it introduces operational complexity, higher costs, and more points of failure.
+
+To mitigate this, the design can:
+
+Use managed services (e.g., managed Kafka, cloud warehouses) to reduce operational overhead
+Implement strong data governance and monitoring (data quality checks, pipeline observability)
+Start with a simplified version (e.g., fewer components) and evolve as scale increases
+
+Ignoring this trade-off would either result in a system that cannot scale (too simple) or one that is unnecessarily complex for the hospital’s needs.
